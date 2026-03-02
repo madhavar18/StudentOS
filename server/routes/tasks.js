@@ -28,4 +28,33 @@ router.post("/", async (req, res) => {
     }
 });
 
+router.put("/:id", async (req, res) => {
+    try {
+        console.log("id: ", req.params.id);
+        console.log("body: ", req.body);
+
+        const updatedTask = await Task.findByIdAndUpdate(
+            req.params.id, 
+            req.body,
+            {returnDocument: 'after'}
+        );
+        res.json(updatedTask);
+    }
+    catch(err) {
+        console.log(err);
+        res.send("Update failed");
+    }
+});
+
+router.delete("/:id", async (req, res) => {
+    try {
+        await Task.findByIdAndDelete(req.params.id);
+        res.send("Task deleted successfully");
+    }
+    catch(err) {
+        console.log(err);
+        res.send("Error deleting task");
+    }
+});
+
 module.exports = router;

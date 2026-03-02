@@ -5,9 +5,9 @@ const taskRoutes = require("./routes/tasks");
 const db = require("./config/db");
 
 const app = express();
-
-app.use("/tasks", taskRoutes);
 app.use(express.json());
+app.use("/tasks", taskRoutes);
+
 app.get("/health", (req, res) => {
     res.send("StudentOS server up and running & deliverable")
 })
