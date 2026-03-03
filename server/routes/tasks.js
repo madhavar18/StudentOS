@@ -15,16 +15,13 @@ router.get("/all", async (req, res) => {
 
 router.post("/", async (req, res) => {
     try {
-        const newTask = new Task({
-            title: "Sample Task",
-            type: "assignment"
-        });
+        const newTask = new Task(req.body);
 
         await newTask.save();
         res.send("Task saved successfully");
     }
     catch(err) {
-        res.send("Error saving task", err);
+        res.status(500).send("Error saving task", err);
     }
 });
 
@@ -56,5 +53,25 @@ router.delete("/:id", async (req, res) => {
         res.send("Error deleting task");
     }
 });
+
+router.patch("/:id/complete", async (req, res) => {
+    try {
+        const updatedTask = await Task.findByIdAndUpdate(
+            req.params.id,
+            { status: "completed" },
+            { returnDocument: 'after' }
+        );
+
+        if(!updatedTask) {
+            return res.status(404).send("Task not found");
+        }
+
+        res.json(updatedTask);
+    } catch(err) {
+        console.log(err);
+        return res.status(500).send("Error updating task");
+    }
+});
+
 
 module.exports = router;
