@@ -72,6 +72,39 @@ router.patch("/:id/complete", async (req, res) => {
         return res.status(500).send("Error updating task");
     }
 });
+router.get("/stats", async (req, res) => {
+    try {
+        const [
+            totalTasks,
+            completedTasks,
+            pendingTasks,
+            assignments,
+            projects,
+            exams
+        ] = await Promise.all([
+            Task.countDocuments(),
+            Task.countDocuments({ status: "completed" }),
+            Task.countDocuments({ status: "pending" }),
+            Task.countDocuments({ type: "assignment" }),
+            Task.countDocuments({ type: "project" }),
+            Task.countDocuments({ type: "exam" })
+        ]);
+
+        res.json({
+            totalTasks,
+            completedTasks,
+            pendingTasks,
+            assignments,
+            projects,
+            exams
+        })
+        }
+    catch(err) {
+        console.log(err);
+         res.status(500).send("Error fetching stats");
+        }
+});
+
 
 
 module.exports = router;
