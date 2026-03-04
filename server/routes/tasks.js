@@ -17,8 +17,8 @@ router.post("/", async (req, res) => {
     try {
         const newTask = new Task(req.body);
 
-        await newTask.save();
-        res.send("Task saved successfully");
+        const savedTask = await newTask.save();
+        res.json(savedTask);
     }
     catch(err) {
         res.status(500).send("Error saving task", err);
