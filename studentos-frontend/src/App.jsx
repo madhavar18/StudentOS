@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import TaskForm from "./components/TaskForm";
+import TaskList from "./components/TaskList";
 
 function App() {
 
@@ -39,7 +41,7 @@ function App() {
     });
     const data = await res.json();
 
-    setTasks((prevTasks) =>[...tasks, data]);
+    setTasks((prevTasks) =>[...prevTasks, data]);
     setTitle("");
     setType("assignment");
     setDeadLine("");
@@ -97,38 +99,15 @@ function App() {
 
 </div>
 
-
-      <div className="card p-3">
-        <h4>Create Task</h4>
-
-          <input
-            className="form-control mb-2"
-            placeholder="Task title"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-          />
-
-          <select
-            className="form-control mb-2"
-            value={type}
-            onChange={(e) => setType(e.target.value)}
-          >
-            <option value="assignment">Assignment</option>
-            <option value="exam">Exam</option>
-            <option value="project">Project</option>
-          </select>
-
-          <input
-            type="date"
-            className="form-control mb-2"
-            value={deadline}
-            onChange={(e) => setDeadLine(e.target.value)}
-          />
-
-          <button className="btn btn-primary" onClick={createTask}>
-            Create Task
-          </button>
-      </div>
+<TaskForm
+  title={title}
+  setTitle={setTitle}
+  type={type}
+  setType={setType}
+  deadline={deadline}
+  setDeadLine={setDeadLine}
+  createTask={createTask}
+/>
 
 <div className="mb-3">
 
@@ -158,71 +137,12 @@ Exams
 
 </div>
 
-      <div className="mt-4">
-        <h4>Tasks</h4>
-
-        <ul className="list-group">
-          {tasks.sort((a, b) => new Date(a.deadline) - new Date(b.deadline))
-              .filter((task) => {
-              if (filter === "all") return true;
-              if (filter === "pending") return task.status === "pending";
-              if (filter === "completed") return task.status === "completed";
-              if (filter === "assignment") return task.type === "assignment";
-              if (filter === "project") return task.type === "project";
-              if (filter === "exam") return task.type === "exam";
-            }).map((task) => {
-
-  const isOverdue =
-    task.deadline &&
-    new Date(task.deadline) < new Date() &&
-    task.status !== "completed";
-
-  return (
-    <li
-      key={task._id}
-      className={`list-group-item d-flex justify-content-between align-items-center ${
-        isOverdue ? "list-group-item-danger" : ""
-      }`}
-    >
-
-      <span>
-        {task.title}
-
-        <span className="badge bg-secondary ms-2">{task.type}</span>
-
-        <span className={`badge ms-2 ${
-          task.status === "completed" ? "bg-success" : "bg-warning text-dark"
-        }`}>
-          {task.status}</span>
-        {task.deadline && (
-          <span> | Due: {new Date(task.deadline).toLocaleDateString()}</span>
-        )}
-      </span>
-
-      <div>
-        {task.status !== "completed" && (
-          <button
-            className="btn btn-success btn-sm me-2"
-            onClick={() => completeTask(task._id)}
-          >
-            Complete
-          </button>
-        )}
-
-        <button
-          className="btn btn-danger btn-sm"
-          onClick={() => deleteTask(task._id)}
-        >
-          Delete
-        </button>
-      </div>
-
-    </li>
-  );
-})}
-        </ul>
-
-      </div>
+      <TaskList
+  tasks={tasks}
+  filter={filter}
+  completeTask={completeTask}
+  deleteTask={deleteTask}
+/>
 
     </div>
   );
