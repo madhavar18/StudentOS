@@ -7,6 +7,7 @@ function App() {
   const [type, setType] = useState("assignment");
   const [stats, setStats] = useState({});
   const [filter, setFilter] = useState("all");
+  const [deadline, setDeadLine] = useState("");
 
   useEffect(() => {
     fetch("http://localhost:3000/tasks/all")
@@ -32,7 +33,8 @@ function App() {
       },
       body: JSON.stringify({
         title: title,
-        type: type
+        type: type,
+        deadline: deadline
       })
     });
     const data = await res.json();
@@ -40,6 +42,7 @@ function App() {
     setTasks((prevTasks) =>[...tasks, data]);
     setTitle("");
     setType("assignment");
+    setDeadLine("");
   };
 
   const completeTask = async (id) => {
@@ -115,6 +118,13 @@ function App() {
             <option value="project">Project</option>
           </select>
 
+          <input
+            type="date"
+            className="form-control mb-2"
+            value={deadline}
+            onChange={(e) => setDeadLine(e.target.value)}
+          />
+
           <button className="btn btn-primary" onClick={createTask}>
             Create Task
           </button>
@@ -152,36 +162,64 @@ Exams
         <h4>Tasks</h4>
 
         <ul className="list-group">
-          {tasks.filter((task) => {
+          {tasks.sort((a, b) => new Date(a.deadline) - new Date(b.deadline))
+              .filter((task) => {
               if (filter === "all") return true;
               if (filter === "pending") return task.status === "pending";
               if (filter === "completed") return task.status === "completed";
               if (filter === "assignment") return task.type === "assignment";
               if (filter === "project") return task.type === "project";
               if (filter === "exam") return task.type === "exam";
-            }).map((task) => (
-           <li key={task._id} className="list-group-item d-flex justify-content-between align-items-center">
+            }).map((task) => {
 
-              <span>
-                {task.title} — {task.type} — {task.status}
-              </span>
+  const isOverdue =
+    task.deadline &&
+    new Date(task.deadline) < new Date() &&
+    task.status !== "completed";
 
-              {task.status !== "completed" && (
-                <button
-                  className="btn btn-success btn-sm"
-                  onClick={() => completeTask(task._id)}
-                >
-                  Complete
-                </button>
-              )}
-              <button
-                className="btn btn-danger btn-sm"
-                onClick={() => deleteTask(task._id)}
-              >
-                Delete
-              </button>
-            </li>
-          ))}
+  return (
+    <li
+      key={task._id}
+      className={`list-group-item d-flex justify-content-between align-items-center ${
+        isOverdue ? "list-group-item-danger" : ""
+      }`}
+    >
+
+      <span>
+        {task.title}
+
+        <span className="badge bg-secondary ms-2">{task.type}</span>
+
+        <span className={`badge ms-2 ${
+          task.status === "completed" ? "bg-success" : "bg-warning text-dark"
+        }`}>
+          {task.status}</span>
+        {task.deadline && (
+          <span> | Due: {new Date(task.deadline).toLocaleDateString()}</span>
+        )}
+      </span>
+
+      <div>
+        {task.status !== "completed" && (
+          <button
+            className="btn btn-success btn-sm me-2"
+            onClick={() => completeTask(task._id)}
+          >
+            Complete
+          </button>
+        )}
+
+        <button
+          className="btn btn-danger btn-sm"
+          onClick={() => deleteTask(task._id)}
+        >
+          Delete
+        </button>
+      </div>
+
+    </li>
+  );
+})}
         </ul>
 
       </div>

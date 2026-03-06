@@ -15,7 +15,11 @@ router.get("/all", async (req, res) => {
 
 router.post("/", async (req, res) => {
     try {
-        const newTask = new Task(req.body);
+        const newTask = new Task({
+            title: req.body.title,
+            type: req.body.type,
+            deadline: req.body.deadline
+        });
 
         const savedTask = await newTask.save();
         res.json(savedTask);
