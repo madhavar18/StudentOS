@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import TaskForm from "./components/TaskForm";
 import TaskList from "./components/TaskList";
+import {fetchTasks, fetchStats, createTaskAPI, completeTaskAPI, deleteTaskAPI} from "./services/api";
 
 function App() {
 
@@ -12,34 +13,18 @@ function App() {
   const [deadline, setDeadLine] = useState("");
 
   useEffect(() => {
-    fetch("http://localhost:3000/tasks/all")
-      .then((res) => res.json())
-      .then((data) => {
-        setTasks(data);
-      })
-
-      fetch("http://localhost:3000/tasks/stats")
-      .then((res) => res.json())
-      .then((data) => {
-        setStats(data);
-      })
-      .catch((err) => console.log(err));
+      fetchTasks().then(setTasks);
+      fetchStats().then(setStats);
   }, []);
 
   const createTask = async () => {
     if(!title.trim()) return alert("Title is required");
-    const res = await fetch("http://localhost:3000/tasks", {
-      method: "POST",
-      headers: {
-        "Content-type" : "application/json"
-      },
-      body: JSON.stringify({
-        title: title,
-        type: type,
-        deadline: deadline
-      })
+    
+    const data = await createTaskAPI({
+      title,
+      type,
+      deadline
     });
-    const data = await res.json();
 
     setTasks((prevTasks) =>[...prevTasks, data]);
     setTitle("");
@@ -48,26 +33,22 @@ function App() {
   };
 
   const completeTask = async (id) => {
-    await fetch(`http://localhost:3000/tasks/${id}/complete`, {
-      method: "PATCH"
-    });
-
+    await completeTaskAPI(id);
     setTasks((prevTasks) => 
-    prevTasks.map((task) =>
-    task._id === id ? { ...task, status: "completed" } : task
-    )
-  );
-  };
+      prevTasks.map((task) => 
+        task._id === id ? {...task, status : "completed"} : task
+      )
+    );
+    };
+
+
 
   const deleteTask = async (id) => {
-    await fetch(`http://localhost:3000/tasks/${id}`, {
-      method: "DELETE"
-    });
+    await deleteTaskAPI(id);
 
-    setTasks(prevTasks => 
-      prevTasks.filter((task) => task._id !== id)
-    )
-  }
+    setTasks((prevTasks) =>
+      prevTasks.filter((task) => task._id !== id));
+  };
 
   return (
     <div className="container mt-4">

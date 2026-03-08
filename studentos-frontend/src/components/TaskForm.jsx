@@ -1,4 +1,4 @@
-function TaskForm() {
+function TaskForm({title, setTitle, type, setType, deadline, setDeadLine, createTask}) {
     return (
         <div className="card p-3">
         <h4>Create Task</h4>
