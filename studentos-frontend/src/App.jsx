@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import TaskForm from "./components/TaskForm";
 import TaskList from "./components/TaskList";
 import {fetchTasks, fetchStats, createTaskAPI, completeTaskAPI, deleteTaskAPI} from "./services/api";
+import Dashboard from "./components/Dashboard";
+import FilterBar from "./components/FilterBar";
 
 function App() {
 
@@ -55,30 +57,7 @@ function App() {
 
       <h1 className="text-center mb-4">StudentOS</h1>
 
-       <div className="row mb-4">
-
-  <div className="col">
-    <div className="card p-3 text-center">
-      <h5>Total Tasks</h5>
-      <h3>{stats.totalTasks}</h3>
-    </div>
-  </div>
-
-  <div className="col">
-    <div className="card p-3 text-center">
-      <h5>Completed</h5>
-      <h3>{stats.completedTasks}</h3>
-    </div>
-  </div>
-
-  <div className="col">
-    <div className="card p-3 text-center">
-      <h5>Pending</h5>
-      <h3>{stats.pendingTasks}</h3>
-    </div>
-  </div>
-
-</div>
+       <Dashboard stats = {stats} />
 
 <TaskForm
   title={title}
@@ -90,33 +69,7 @@ function App() {
   createTask={createTask}
 />
 
-<div className="mb-3">
-
-<button className="btn btn-secondary me-2" onClick={() => setFilter("all")}>
-All
-</button>
-
-<button className="btn btn-secondary me-2" onClick={() => setFilter("pending")}>
-Pending
-</button>
-
-<button className="btn btn-secondary me-2" onClick={() => setFilter("completed")}>
-Completed
-</button>
-
-<button className="btn btn-secondary me-2" onClick={() => setFilter("assignment")}>
-Assignments
-</button>
-
-<button className="btn btn-secondary me-2" onClick={() => setFilter("project")}>
-Projects
-</button>
-
-<button className="btn btn-secondary" onClick={() => setFilter("exam")}>
-Exams
-</button>
-
-</div>
+<FilterBar setFilter={setFilter} />
 
       <TaskList
   tasks={tasks}
