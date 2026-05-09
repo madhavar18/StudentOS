@@ -1,47 +1,7 @@
 import { useState, useEffect } from 'react';
 import TaskCard from './components/tasks/TaskCard';
+import { fetchTasks, completeTask, deleteTask } from './services/taskService';
 import './App.css';
-
-// Simulated task data - replaced with real API call on Day 17
-function fetchTasksFromAPI() {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve([
-        {
-                    _id: 'task1',
-                    title: 'Complete React assignment',
-                    type: 'Assignment',
-                    deadline: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(),
-                    completed: false,
-                    subtasks: [
-                        { _id: 's1', title: 'Read docs', completed: true },
-                        { _id: 's2', title: 'Write code', completed: false },
-                        { _id: 's3', title: 'Submit', completed: false }
-                    ]
-                },
-                {
-                    _id: 'task2',
-                    title: 'Study for DBMS exam',
-                    type: 'Exam',
-                    deadline: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
-                    completed: false,
-                    subtasks: []
-                },
-                {
-                    _id: 'task3',
-                    title: 'Build portfolio website',
-                    type: 'Project',
-                    deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-                    completed: true,
-                    subtasks: [
-                        { _id: 's4', title: 'Design layout', completed: true },
-                        { _id: 's5', title: 'Write content', completed: true }
-                    ]
-                }
-      ])
-    }, 600);
-  });
-}
 
 function App() {
   const [tasks, setTasks] = useState([]);
@@ -49,10 +9,11 @@ function App() {
   const [error, setError] = useState(null);
   const [filter, setFilter] = useState('all');
 
+  // Real API call - same useEffect pattern, different data source
   // Load tasks once on mount - same pattern as Bank Tracker Day 12
   useEffect(() => {
     setLoading(true);
-    fetchTasksFromAPI()
+    fetchTasks()
       .then(data => {
         // Sort by urgency immediately after loading
         // WHY here and not in render: sorting is a data operation,
@@ -61,7 +22,7 @@ function App() {
         setLoading(false);
       })
       .catch(err => {
-        setError('Failed to load tasks');
+        setError(err.message);
         setLoading(false);
       });
   }, []);
@@ -70,7 +31,7 @@ function App() {
   useEffect(() => {
     const pending = tasks.filter(t => !t.completed).length;
     document.title = pending > 0 ? `StudentOS (${pending} pending)` : 'StudentOS';
-    return () => { document.title = 'StudentOs' };
+    return () => { document.title = 'StudentOS' };
   } ,[tasks]); 
 
   // Derived stats - computed from tasks state, not stored seperately
@@ -91,19 +52,24 @@ function App() {
     return task.type.toLowerCase() === filter; // assignment, exam, project
   });
 
-  function handleComplete(taskId) {
-    // Immutable update - same patter as Bank Tracker's handleDeposit
-    setTasks(prev => prev.map(task =>
-      task._id === taskId
-        ? {...task, completed: true}
-        : task
-    ));
+  async function handleComplete(taskId) {
+    try {
+      const updatedTask = await completeTask(taskId);
+      setTasks(prev => prev.map(t => 
+        t._id === taskId ? { ...t, ...updatedTask} : taskId
+      ));
+    } catch (err) {
+      setError(err.message);
+    }
   }
 
-  function handleDelete(taskId) {
-    // filter returns new array without the deleted task
-    // Same immutable pattern as Day 7's filter-for-deletion
-    setTasks(prev => prev.filter(task => task._id !== taskId));
+  async function handleDelete(taskId) {
+    try {
+      await deleteTask(taskId);
+      setTasks(prev => prev.filter(t => t._id !== taskId));
+    } catch (err) {
+      setError(err.message);
+    }
   }
 
   if (loading) return (
@@ -121,7 +87,7 @@ function App() {
       </header>
 
       {/* Stats panel - derived values displayed*/}
-      <div clasName="stats-row">
+      <div className="stats-row">
         {Object.entries(stats).map(([key, value]) => (
           <div className="stat-card" key={key}>
             <span className="stat-value">{value}</span>
@@ -143,7 +109,12 @@ function App() {
         ))}
       </div>
 
-      {error && <div className="error-banner">{error}</div>}
+      {error && (
+        <div className="error-banner">
+          {error}
+          <button onClick={() => setError(null)}>✕</button>
+        </div>
+      )}
 
       {/* Task grid */}
       <div className="tasks-grid">
