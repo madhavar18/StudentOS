@@ -56,7 +56,7 @@ function App() {
     try {
       const updatedTask = await completeTask(taskId);
       setTasks(prev => prev.map(t => 
-        t._id === taskId ? { ...t, ...updatedTask} : taskId
+        t._id === taskId ? { ...t, ...updatedTask} : t
       ));
     } catch (err) {
       setError(err.message);
