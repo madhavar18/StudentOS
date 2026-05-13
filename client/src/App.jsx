@@ -1,155 +1,185 @@
 import { useState, useEffect } from 'react';
 import TaskCard from './components/tasks/TaskCard';
+import TaskForm from './components/tasks/TaskForm';
 import { fetchTasks, completeTask, deleteTask } from './services/taskService';
 import './App.css';
 
 function App() {
-  const [tasks, setTasks] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [filter, setFilter] = useState('all');
+    const [tasks, setTasks] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+    const [filter, setFilter] = useState('all');
+    const [showForm, setShowForm] = useState(false); // controls form visibility
 
-  // Real API call - same useEffect pattern, different data source
-  // Load tasks once on mount - same pattern as Bank Tracker Day 12
-  useEffect(() => {
-    setLoading(true);
-    fetchTasks()
-      .then(data => {
-        // Sort by urgency immediately after loading
-        // WHY here and not in render: sorting is a data operation,
-        // not a display operation. The data arrives unsorted from the API.
-        setTasks(sortByUrgency(data));
-        setLoading(false);
-      })
-      .catch(err => {
-        setError(err.message);
-        setLoading(false);
-      });
-  }, []);
+    useEffect(() => {
+        setLoading(true);
+        fetchTasks()
+            .then(data => {
+                setTasks(sortByUrgency(data));
+                setLoading(false);
+            })
+            .catch(err => {
+                setError(err.message);
+                setLoading(false);
+            });
+    }, []);
 
-  // Update document title - same useEffect pattern as Bank Tracker
-  useEffect(() => {
-    const pending = tasks.filter(t => !t.completed).length;
-    document.title = pending > 0 ? `StudentOS (${pending} pending)` : 'StudentOS';
-    return () => { document.title = 'StudentOS' };
-  } ,[tasks]); 
+    useEffect(() => {
+        const pending = tasks.filter(t => !t.completed).length;
+        document.title = pending > 0 ? `StudentOS (${pending} pending)` : 'StudentOS';
+        return () => { document.title = 'StudentOS'; };
+    }, [tasks]);
 
-  // Derived stats - computed from tasks state, not stored seperately
-  // WHY not state: same reason as Bank Tracker's totalBalance.
-  // Stats are always calculable. Storing them seperately = sync problem.
-  const stats = {
-    total: tasks.length,
-    pending: tasks.filter(t => !t.completed).length,
-    completed: tasks.filter(t => t.completed).length,
-    overdue: tasks.filter(t => !t.completed && new Date(t.deadline) < new Date()).length
-  };
-
-  // Filtered tasks - derived from tasks + filter state
-  const filteredTasks = tasks.filter(task => {
-    if(filter === 'all') return true;
-    if(filter === 'pending') return !task.completed;
-    if(filter === 'completed') return task.completed;
-    return task.type.toLowerCase() === filter; // assignment, exam, project
-  });
-
-  async function handleComplete(taskId) {
-    try {
-      const updatedTask = await completeTask(taskId);
-      setTasks(prev => prev.map(t => 
-        t._id === taskId ? { ...t, ...updatedTask} : t
-      ));
-    } catch (err) {
-      setError(err.message);
+    // Called when TaskForm successfully creates a task
+    // WHY add to state directly instead of re-fetching all tasks:
+    // Re-fetching makes an unnecessary API call — we already have the new task.
+    // The server returns the complete created task object — use it directly.
+    // This pattern is called "optimistic UI update":
+    // update the state with what the server confirmed, no extra round trip.
+    function handleTaskCreated(newTask) {
+        setTasks(prev => sortByUrgency([newTask, ...prev]));
+        setShowForm(false); // close the form after successful creation
     }
-  }
 
-  async function handleDelete(taskId) {
-    try {
-      await deleteTask(taskId);
-      setTasks(prev => prev.filter(t => t._id !== taskId));
-    } catch (err) {
-      setError(err.message);
+    async function handleComplete(taskId) {
+        try {
+            const updatedTask = await completeTask(taskId);
+            setTasks(prev => prev.map(t =>
+                t._id === taskId ? { ...t, ...updatedTask } : t
+            ));
+        } catch (err) {
+            setError(err.message);
+        }
     }
-  }
 
-  if (loading) return (
+    async function handleDelete(taskId) {
+        try {
+            await deleteTask(taskId);
+            setTasks(prev => prev.filter(t => t._id !== taskId));
+        } catch (err) {
+            setError(err.message);
+        }
+    }
+
+    const stats = {
+        total: tasks.length,
+        completed: tasks.filter(t => t.completed).length,
+        pending: tasks.filter(t => !t.completed).length,
+        overdue: tasks.filter(t =>
+            !t.completed && new Date(t.deadline) < new Date()
+        ).length
+    };
+
+    const filteredTasks = tasks.filter(task => {
+        if (filter === 'all') return true;
+        if (filter === 'pending') return !task.completed;
+        if (filter === 'completed') return task.completed;
+        return task.type.toLowerCase() === filter;
+    });
+
+    if (loading) return (
         <div className="loading-screen">
             <div className="spinner"></div>
             <p>Loading your tasks...</p>
         </div>
-  );
+    );
 
-  return (
-    <div className="app">
-      <header className="app-header">
-        <h1>StudentOS</h1>
-        <p className="tagline">Your academic command centre</p>
-      </header>
+    return (
+        <div className="app">
+            <header className="app-header">
+                <h1>StudentOS</h1>
+                <p className="tagline">Your academic command centre</p>
+            </header>
 
-      {/* Stats panel - derived values displayed*/}
-      <div className="stats-row">
-        {Object.entries(stats).map(([key, value]) => (
-          <div className="stat-card" key={key}>
-            <span className="stat-value">{value}</span>
-            <span className="stat-label">{key}</span>
-          </div>
-        ))}
-      </div>
+            {/* Stats */}
+            <div className="stats-row">
+                {Object.entries(stats).map(([key, value]) => (
+                    <div className="stat-card" key={key}>
+                        <span className="stat-value"
+                            style={{ color: key === 'overdue' && value > 0 ? '#e74c3c' : 'inherit' }}>
+                            {value}
+                        </span>
+                        <span className="stat-label">{key}</span>
+                    </div>
+                ))}
+            </div>
 
-      {/* Filter bar */}
-      <div className="filter-bar">
-        {['all', 'pending', 'completed', 'assignment', 'exam', 'project'].map(f => (
-          <button
-            key={f}
-            className={`filter-btn ${filter === f ? 'active' : ''}`}
-            onClick={() => setFilter(f)}
-          >
-            {f.charAt(0).toUpperCase() + f.slice(1)}
-          </button>
-        ))}
-      </div>
+            {/* Add task button */}
+            <button
+                className="add-task-btn"
+                onClick={() => setShowForm(true)}
+            >
+                + Add Task
+            </button>
 
-      {error && (
-        <div className="error-banner">
-          {error}
-          <button onClick={() => setError(null)}>✕</button>
+            {/* Filter bar */}
+            <div className="filter-bar">
+                {['all','pending','completed','assignment','exam','project'].map(f => (
+                    <button
+                        key={f}
+                        className={`filter-btn ${filter === f ? 'active' : ''}`}
+                        onClick={() => setFilter(f)}
+                    >
+                        {f.charAt(0).toUpperCase() + f.slice(1)}
+                    </button>
+                ))}
+            </div>
+
+            {error && (
+                <div className="error-banner">
+                    {error}
+                    <button onClick={() => setError(null)}>✕</button>
+                </div>
+            )}
+
+            {/* Task grid */}
+            <div className="tasks-grid">
+                {filteredTasks.length === 0
+                    ? <p className="empty">
+                        {filter === 'all'
+                            ? 'No tasks yet. Click "Add Task" to create one.'
+                            : `No ${filter} tasks.`}
+                      </p>
+                    : filteredTasks.map(task => (
+                        <TaskCard
+                            key={task._id}
+                            task={task}
+                            onComplete={handleComplete}
+                            onDelete={handleDelete}
+                        />
+                    ))
+                }
+            </div>
+
+            {/* Task form modal — conditionally rendered */}
+            {/* WHY conditional rendering not CSS display:none:
+                When showForm is false, TaskForm doesn't exist in the DOM.
+                Its local state (formData, errors) is gone.
+                Next time it opens, it starts fresh.
+                With display:none, the component stays mounted —
+                form data would persist between opens (usually unwanted). */}
+            {showForm && (
+                <TaskForm
+                    onTaskCreated={handleTaskCreated}
+                    onCancel={() => setShowForm(false)}
+                />
+            )}
         </div>
-      )}
-
-      {/* Task grid */}
-      <div className="tasks-grid">
-        {filteredTasks.length === 0
-          ? <p className="empty">No tasks found for this filter.</p>
-          : filteredTasks.map(task => (
-              <TaskCard 
-                key={task._id}
-                task={task}
-                onComplete={handleComplete}
-                onDelete={handleDelete}
-              />
-          ))
-        }
-      </div>
-    </div>
-  );
+    );
 }
 
-// Pure utility function — no React dependency
-// WHY pure: sorting logic is business logic, not UI logic.
-// On Day 78, this becomes an ML-powered ranking function.
-// Pure functions are easy to test, easy to replace, easy to move.
 function sortByUrgency(tasks) {
-    const urgencyOrder = { overdue: 0, today: 1, soon: 2, low: 3, none: 4 };
-    return [...tasks].sort((a, b) => {
-        const aUrgency = getUrgencyLevel(a.deadline, a.completed);
-        const bUrgency = getUrgencyLevel(b.deadline, b.completed);
-        return urgencyOrder[aUrgency] - urgencyOrder[bUrgency];
-    });
+    const order = { overdue: 0, today: 1, soon: 2, low: 3, none: 4 };
+    return [...tasks].sort((a, b) =>
+        order[getUrgencyLevel(a)] - order[getUrgencyLevel(b)]
+    );
 }
 
-function getUrgencyLevel(deadline, completed) {
-    if (completed) return 'none';
-    const days = Math.ceil((new Date(deadline) - new Date()) / (1000 * 60 * 60 * 24));
+function getUrgencyLevel(task) {
+    if (task.completed) return 'none';
+    const days = Math.ceil(
+        (new Date(task.deadline) - new Date()) / (1000 * 60 * 60 * 24)
+    );
     if (days < 0) return 'overdue';
     if (days === 0) return 'today';
     if (days <= 3) return 'soon';
